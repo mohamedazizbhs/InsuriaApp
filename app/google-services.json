@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "99224694708",
+    "project_id": "insuria-1c9d6",
+    "storage_bucket": "insuria-1c9d6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:99224694708:android:3472723c7f2584afc44ce1",
+        "android_client_info": {
+          "package_name": "com.example.insuriaapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDof77Bq66s8Xe0WvbY9kQ5XDNl1cj3uVc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
