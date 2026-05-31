@@ -30,7 +30,6 @@ import com.google.firebase.auth.FirebaseAuth
 private val Navy = Color(0xFF00133F)
 private val Navy2 = Color(0xFF00246E)
 private val Blue = Color(0xFF1463FF)
-private val TextBlue = Color(0xFF071D55)
 
 @Composable
 fun LoginScreen(
@@ -40,7 +39,8 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var isError by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
     Column(
@@ -48,7 +48,6 @@ fun LoginScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -59,7 +58,6 @@ fun LoginScreen(
                     )
                 )
         ) {
-
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier
@@ -80,10 +78,9 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-
                 Image(
                     painter = painterResource(id = R.drawable.insuria_logo),
-                    contentDescription = null,
+                    contentDescription = "Logo Insuria",
                     modifier = Modifier
                         .fillMaxWidth(0.58f)
                         .height(90.dp),
@@ -122,19 +119,19 @@ fun LoginScreen(
                 .background(Color.White)
                 .padding(28.dp)
         ) {
-
             OutlinedTextField(
                 value = email,
                 onValueChange = {
                     email = it
-                    errorMessage = ""
+                    message = ""
                 },
                 label = { Text("Email") },
                 leadingIcon = {
                     Icon(Icons.Outlined.Mail, contentDescription = null)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(18.dp),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -143,7 +140,7 @@ fun LoginScreen(
                 value = password,
                 onValueChange = {
                     password = it
-                    errorMessage = ""
+                    message = ""
                 },
                 label = { Text("Mot de passe") },
                 leadingIcon = {
@@ -171,49 +168,76 @@ fun LoginScreen(
                     else
                         PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(18.dp),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Mot de passe oublié ?",
-                color = Blue,
+            TextButton(
+                onClick = {
+                    if (email.isBlank()) {
+                        isError = true
+                        message = "Entrez votre email pour réinitialiser le mot de passe."
+                    } else {
+                        FirebaseAuth.getInstance()
+                            .sendPasswordResetEmail(email)
+                            .addOnSuccessListener {
+                                isError = false
+                                message = "Un email de réinitialisation a été envoyé."
+                            }
+                            .addOnFailureListener { error ->
+                                isError = true
+                                message = error.message ?: "Erreur lors de l'envoi de l'email."
+                            }
+                    }
+                },
                 modifier = Modifier.align(Alignment.End)
-            )
+            ) {
+                Text("Mot de passe oublié ?", color = Blue)
+            }
 
-            if (errorMessage.isNotEmpty()) {
-
+            if (message.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error
+                    text = message,
+                    color = if (isError) MaterialTheme.colorScheme.error else Blue
                 )
             }
 
-            Spacer(modifier = Modifier.height(34.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Button(
                 onClick = {
-
                     if (email.isBlank() || password.isBlank()) {
-                        errorMessage = "Veuillez remplir tous les champs."
+                        isError = true
+                        message = "Veuillez remplir tous les champs."
                         return@Button
                     }
 
                     isLoading = true
+                    message = ""
 
                     FirebaseAuth.getInstance()
                         .signInWithEmailAndPassword(email, password)
-                        .addOnSuccessListener {
-                            isLoading = false
-                            onLoginSuccess()
+                        .addOnSuccessListener { authResult ->
+                            val user = authResult.user
+
+                            if (user != null && user.isEmailVerified) {
+                                isLoading = false
+                                onLoginSuccess()
+                            } else {
+                                isLoading = false
+                                isError = true
+                                message = "Veuillez vérifier votre email avant de vous connecter."
+                                FirebaseAuth.getInstance().signOut()
+                            }
                         }
                         .addOnFailureListener { error ->
                             isLoading = false
-                            errorMessage =
-                                error.message ?: "Erreur de connexion."
+                            isError = true
+                            message = error.message ?: "Erreur de connexion."
                         }
                 },
                 modifier = Modifier
@@ -222,19 +246,16 @@ fun LoginScreen(
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Blue
-                )
+                ),
+                enabled = !isLoading
             ) {
-
                 if (isLoading) {
-
                     CircularProgressIndicator(
                         color = Color.White,
                         modifier = Modifier.size(22.dp),
                         strokeWidth = 2.dp
                     )
-
                 } else {
-
                     Text(
                         text = "Se connecter",
                         fontSize = 20.sp,

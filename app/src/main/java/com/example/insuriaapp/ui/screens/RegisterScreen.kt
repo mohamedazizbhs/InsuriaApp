@@ -31,11 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.insuriaapp.R
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 private val Navy = Color(0xFF00133F)
 private val Navy2 = Color(0xFF00246E)
 private val Blue = Color(0xFF1463FF)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
@@ -52,6 +53,8 @@ fun RegisterScreen(
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
 
     Column(
         modifier = Modifier
@@ -162,17 +165,56 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value = dateNaissance,
-                onValueChange = {
-                    dateNaissance = it
-                    errorMessage = ""
-                },
+                onValueChange = {},
                 label = { Text("Date de naissance") },
                 placeholder = { Text("JJ/MM/AAAA") },
                 leadingIcon = { Icon(Icons.Outlined.CalendarMonth, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                singleLine = true
+                singleLine = true,
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Outlined.CalendarMonth, contentDescription = null)
+                    }
+                }
             )
+            if (showDatePicker) {
+                DatePickerDialog(
+                    onDismissRequest = { showDatePicker = false },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val selectedDateMillis = datePickerState.selectedDateMillis
+
+                                if (selectedDateMillis != null) {
+                                    val formatter = java.text.SimpleDateFormat(
+                                        "dd/MM/yyyy",
+                                        java.util.Locale.getDefault()
+                                    )
+
+                                    dateNaissance = formatter.format(
+                                        java.util.Date(selectedDateMillis)
+                                    )
+
+                                    errorMessage = ""
+                                }
+
+                                showDatePicker = false
+                            }
+                        ) {
+                            Text("OK")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDatePicker = false }) {
+                            Text("Annuler")
+                        }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -281,13 +323,37 @@ fun RegisterScreen(
 
                     FirebaseAuth.getInstance()
                         .createUserWithEmailAndPassword(email, password)
-                        .addOnSuccessListener {
-                            isLoading = false
-                            onRegisterSuccess()
-                        }
-                        .addOnFailureListener { error ->
-                            isLoading = false
-                            errorMessage = error.message ?: "Erreur lors de la création du compte."
+                        .addOnSuccessListener { authResult ->
+
+                            val uid = authResult.user?.uid
+
+                            if (uid != null) {
+                                val userData = hashMapOf(
+                                    "uid" to uid,
+                                    "nom" to nom,
+                                    "prénom" to prenom,
+                                    "email" to email,
+                                    "dateDeNaissance" to dateNaissance
+                                )
+
+                                FirebaseFirestore.getInstance()
+                                    .collection("users")
+                                    .document(uid)
+                                    .set(userData)
+                                    .addOnSuccessListener {
+                                        authResult.user?.sendEmailVerification()
+
+                                        isLoading = false
+                                        onRegisterSuccess()
+                                    }
+                                    .addOnFailureListener { error ->
+                                        isLoading = false
+                                        errorMessage = error.message ?: "Erreur Firestore."
+                                    }
+                            } else {
+                                isLoading = false
+                                errorMessage = "Impossible de récupérer l'UID."
+                            }
                         }
                 },
                 modifier = Modifier

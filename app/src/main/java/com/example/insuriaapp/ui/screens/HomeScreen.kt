@@ -14,16 +14,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.insuriaapp.R
+import androidx.compose.runtime.*
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 private val Navy = Color(0xFF00133F)
-private val Navy2 = Color(0xFF00246E)
 private val Blue = Color(0xFF1463FF)
 private val LightBg = Color(0xFFF4F7FF)
 private val TextBlue = Color(0xFF071D55)
@@ -31,279 +32,264 @@ private val Green = Color(0xFF18B26B)
 private val Orange = Color(0xFFFFA726)
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onDeclareClaimClick: () -> Unit,
+    onContractsClick: () -> Unit,
+    onClaimsClick: () -> Unit,
+    onAssistanceClick: () -> Unit
+) {
+
+    var prenom by remember {
+        mutableStateOf("Utilisateur")
+    }
+
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    LaunchedEffect(Unit) {
+
+        currentUser?.uid?.let { uid ->
+
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener { document ->
+
+                    prenom =
+                        document.getString("prénom")
+                            ?: "Utilisateur"
+                }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(LightBg)
             .verticalScroll(rememberScrollState())
+            .padding(22.dp)
     ) {
-        HeaderSection()
 
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 22.dp)
-                .offset(y = (-30).dp)
+        HomeHeader(prenom)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        MainClaimCard(onDeclareClaimClick)
+
+        // Garde tout le reste inchangé
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Actions rapides",
+            color = TextBlue,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            MainActionCard()
+            SimpleActionCard(
+                title = "Contrats",
+                icon = Icons.Outlined.Description,
+                modifier = Modifier.weight(1f),
+                onClick = onContractsClick
+            )
 
-            Spacer(modifier = Modifier.height(22.dp))
+            SimpleActionCard(
+                title = "Sinistres",
+                icon = Icons.Outlined.FolderOpen,
+                modifier = Modifier.weight(1f),
+                onClick = onClaimsClick
+            )
 
-            SectionTitle("Actions rapides")
+            SimpleActionCard(
+                title = "Support",
+                icon = Icons.Outlined.SupportAgent,
+                modifier = Modifier.weight(1f),
+                onClick = onAssistanceClick
+            )
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(26.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickActionCard(
-                    title = "Sinistre",
-                    subtitle = "Déclarer",
-                    icon = Icons.Outlined.ReportProblem,
-                    modifier = Modifier.weight(1f)
-                )
+        Text(
+            text = "Aperçu",
+            color = TextBlue,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
 
-                QuickActionCard(
-                    title = "Contrats",
-                    subtitle = "Consulter",
-                    icon = Icons.Outlined.Description,
-                    modifier = Modifier.weight(1f)
-                )
+        Spacer(modifier = Modifier.height(14.dp))
 
-                QuickActionCard(
-                    title = "Support",
-                    subtitle = "Assistance",
-                    icon = Icons.Outlined.SupportAgent,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SmallStatCard(
+                value = "3",
+                label = "Contrats actifs",
+                modifier = Modifier.weight(1f)
+            )
 
-            Spacer(modifier = Modifier.height(26.dp))
+            SmallStatCard(
+                value = "1",
+                label = "Sinistre en cours",
+                modifier = Modifier.weight(1f)
+            )
+        }
 
-            SectionTitle("Aperçu de votre espace")
+        Spacer(modifier = Modifier.height(26.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "Dernier sinistre",
+            color = TextBlue,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
-                    number = "3",
-                    label = "Contrats actifs",
-                    icon = Icons.Outlined.VerifiedUser,
-                    modifier = Modifier.weight(1f)
-                )
+        Spacer(modifier = Modifier.height(14.dp))
 
-                StatCard(
-                    number = "2",
-                    label = "Sinistres suivis",
-                    icon = Icons.Outlined.AssignmentTurnedIn,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        LastClaimCard()
 
-            Spacer(modifier = Modifier.height(26.dp))
+        Spacer(modifier = Modifier.height(26.dp))
 
-            SectionTitle("Mes contrats")
+        AssistanceMinimalCard()
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+    }
+}
 
-            ContractCard(
-                type = "Assurance Auto",
-                number = "N° AUTO-2026-014",
-                status = "Actif",
-                icon = Icons.Outlined.DirectionsCar
+@Composable
+private fun HomeHeader(
+    prénom: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.insuria_logo),
+                contentDescription = "Logo Insuria",
+                modifier = Modifier
+                    .width(130.dp)
+                    .height(55.dp)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            ContractCard(
-                type = "Assurance Habitation",
-                number = "N° HAB-2026-087",
-                status = "Actif",
-                icon = Icons.Outlined.Home
+            Text(
+                text = "Bonjour $prénom 👋",
+                color = TextBlue,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
             )
 
-            Spacer(modifier = Modifier.height(26.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            SectionTitle("Suivi des sinistres")
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            ClaimCard(
-                title = "Accident voiture",
-                date = "12/05/2026",
-                status = "En cours",
-                statusColor = Orange
+            Text(
+                text = "Votre espace assurance",
+                color = TextBlue.copy(alpha = 0.6f),
+                fontSize = 15.sp
             )
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            ClaimCard(
-                title = "Dégât habitation",
-                date = "02/05/2026",
-                status = "Clôturé",
-                statusColor = Green
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Notifications,
+                contentDescription = null,
+                tint = Blue
             )
-
-            Spacer(modifier = Modifier.height(26.dp))
-
-            AssistanceCard()
-
-            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 }
 
 @Composable
-private fun HeaderSection() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(270.dp)
-            .background(
-                Brush.verticalGradient(
-                    listOf(Navy2, Navy)
-                )
-            )
-            .padding(24.dp)
+private fun MainClaimCard(
+    onDeclareClaimClick: () -> Unit
+)  {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Navy),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.insuria_logo),
-                    contentDescription = "Logo",
-                    modifier = Modifier
-                        .width(130.dp)
-                        .height(60.dp)
-                )
+        Column(
+            modifier = Modifier.padding(22.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Shield,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(36.dp)
+            )
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.13f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(
-                text = "Bonjour Aziz 👋",
+                text = "Déclarer un sinistre",
                 color = Color.White,
-                fontSize = 30.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Bienvenue sur votre espace assurance",
-                color = Color.White.copy(alpha = 0.78f),
-                fontSize = 16.sp
+                text = "Ajoutez vos preuves, décrivez l’incident et envoyez votre déclaration rapidement.",
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 14.sp,
+                lineHeight = 21.sp
             )
-        }
-    }
-}
 
-@Composable
-private fun MainActionCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(30.dp),
-        elevation = CardDefaults.cardElevation(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(
-            modifier = Modifier.padding(22.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Blue.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Shield,
-                        contentDescription = null,
-                        tint = Blue,
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column {
-                    Text(
-                        text = "Déclaration rapide",
-                        color = TextBlue,
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        text = "Déclarez un sinistre en quelques étapes",
-                        color = TextBlue.copy(alpha = 0.62f),
-                        fontSize = 14.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Button(
-                onClick = {},
+                onClick = onDeclareClaimClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp),
+                    .height(54.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Blue)
             ) {
                 Text(
-                    text = "Déclarer un sinistre",
-                    fontSize = 18.sp,
+                    text = "Commencer",
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                Text("→", fontSize = 26.sp)
+                Text("→", fontSize = 25.sp)
             }
         }
     }
 }
 
 @Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        color = TextBlue,
-        fontSize = 21.sp,
-        fontWeight = FontWeight.ExtraBold
-    )
-}
-
-@Composable
-private fun QuickActionCard(
+private fun SimpleActionCard(
     title: String,
-    subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.height(120.dp),
-        shape = RoundedCornerShape(24.dp),
+        onClick = onClick,
+        modifier = modifier.height(105.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
@@ -315,92 +301,60 @@ private fun QuickActionCard(
                 imageVector = icon,
                 contentDescription = null,
                 tint = Blue,
-                modifier = Modifier.size(30.dp)
+                modifier = Modifier.size(28.dp)
             )
 
-            Column {
-                Text(
-                    text = title,
-                    color = TextBlue,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-
-                Text(
-                    text = subtitle,
-                    color = TextBlue.copy(alpha = 0.58f),
-                    fontSize = 12.sp
-                )
-            }
+            Text(
+                text = title,
+                color = TextBlue,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
 
 @Composable
-private fun StatCard(
-    number: String,
+private fun SmallStatCard(
+    value: String,
     label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(120.dp),
-        shape = RoundedCornerShape(26.dp),
+        modifier = modifier.height(100.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Blue.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Blue
-                )
-            }
+            Text(
+                text = value,
+                color = Blue,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
 
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column {
-                Text(
-                    text = number,
-                    color = TextBlue,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-
-                Text(
-                    text = label,
-                    color = TextBlue.copy(alpha = 0.62f),
-                    fontSize = 13.sp
-                )
-            }
+            Text(
+                text = label,
+                color = TextBlue.copy(alpha = 0.65f),
+                fontSize = 13.sp
+            )
         }
     }
 }
 
 @Composable
-private fun ContractCard(
-    type: String,
-    number: String,
-    status: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
+private fun LastClaimCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier.padding(18.dp),
@@ -410,21 +364,23 @@ private fun ContractCard(
                 modifier = Modifier
                     .size(52.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Blue.copy(alpha = 0.12f)),
+                    .background(Orange.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon,
+                    imageVector = Icons.Outlined.ReportProblem,
                     contentDescription = null,
-                    tint = Blue
+                    tint = Orange
                 )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
-                    text = type,
+                    text = "Accident voiture",
                     color = TextBlue,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
@@ -433,132 +389,65 @@ private fun ContractCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = number,
+                    text = "Déclaré le 12/05/2026",
                     color = TextBlue.copy(alpha = 0.55f),
                     fontSize = 13.sp
                 )
             }
 
             Text(
-                text = status,
-                color = Green,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
+                text = "En cours",
+                color = Orange,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
 }
 
 @Composable
-private fun ClaimCard(
-    title: String,
-    date: String,
-    status: String,
-    statusColor: Color
-) {
+private fun AssistanceMinimalCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier.padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(statusColor.copy(alpha = 0.13f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FolderOpen,
-                    contentDescription = null,
-                    tint = statusColor
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = TextBlue,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = date,
-                    color = TextBlue.copy(alpha = 0.55f),
-                    fontSize = 13.sp
-                )
-            }
-
-            Text(
-                text = status,
-                color = statusColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
+            Icon(
+                imageVector = Icons.Outlined.SupportAgent,
+                contentDescription = null,
+                tint = Blue,
+                modifier = Modifier.size(32.dp)
             )
-        }
-    }
-}
-
-@Composable
-private fun AssistanceCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(30.dp),
-        colors = CardDefaults.cardColors(containerColor = Navy),
-        elevation = CardDefaults.cardElevation(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(22.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color.White.copy(alpha = 0.13f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.SmartToy,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(30.dp)
-                )
-            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = "Besoin d’aide ?",
-                    color = Color.White,
-                    fontSize = 19.sp,
+                    color = TextBlue,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(5.dp))
-
                 Text(
-                    text = "Contactez le support ou utilisez l’assistant IA.",
-                    color = Color.White.copy(alpha = 0.72f),
+                    text = "Contactez le support ou utilisez l’assistant.",
+                    color = TextBlue.copy(alpha = 0.55f),
                     fontSize = 13.sp
                 )
             }
 
             Text(
                 text = "→",
-                color = Color.White,
-                fontSize = 28.sp
+                color = Blue,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
