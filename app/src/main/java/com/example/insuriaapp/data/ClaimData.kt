@@ -6,6 +6,10 @@ data class ClaimData(
     var preuveType: String = "",
     var description: String = "",
     var localisation: String = "",
+    var hasAudio: Boolean = false,
+    var audioPath: String = "",
+    var contractId: String = "",
+    var contractLabel: String = "",
     var latitude: Double? = null,
     var longitude: Double? = null,
     var statut: String = "En attente"

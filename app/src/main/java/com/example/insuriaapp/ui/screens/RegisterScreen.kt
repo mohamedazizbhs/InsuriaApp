@@ -36,11 +36,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 private val Navy = Color(0xFF00133F)
 private val Navy2 = Color(0xFF00246E)
 private val Blue = Color(0xFF1463FF)
+private val DarkBlue = Color(0xFF00246E)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onLoginClick: () -> Unit
 ) {
     var nom by remember { mutableStateOf("") }
     var prenom by remember { mutableStateOf("") }
@@ -92,7 +94,7 @@ fun RegisterScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.insuria_logo),
+                    painter = painterResource(id = R.drawable.insuria_logo_white),
                     contentDescription = "Logo Insuria",
                     modifier = Modifier
                         .fillMaxWidth(0.58f)
@@ -360,7 +362,7 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .height(62.dp),
                 shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                colors = ButtonDefaults.buttonColors(containerColor = DarkBlue)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -380,7 +382,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             TextButton(
-                onClick = onBackClick,
+                onClick = onLoginClick,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Vous avez déjà un compte ? Se connecter")

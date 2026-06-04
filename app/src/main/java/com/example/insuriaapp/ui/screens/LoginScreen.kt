@@ -30,7 +30,7 @@ import com.google.firebase.auth.FirebaseAuth
 private val Navy = Color(0xFF00133F)
 private val Navy2 = Color(0xFF00246E)
 private val Blue = Color(0xFF1463FF)
-
+private val DarkBlue = Color(0xFF00246E)
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
@@ -43,6 +43,7 @@ fun LoginScreen(
     var isError by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -51,7 +52,7 @@ fun LoginScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp)
+                .height(330.dp)
                 .background(
                     Brush.verticalGradient(
                         listOf(Navy2, Navy)
@@ -79,29 +80,29 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.insuria_logo),
+                    painter = painterResource(id = R.drawable.insuria_logo_white),
                     contentDescription = "Logo Insuria",
                     modifier = Modifier
-                        .fillMaxWidth(0.58f)
-                        .height(90.dp),
+                        .fillMaxWidth(0.75f)
+                        .height(140.dp),
                     contentScale = ContentScale.Fit
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
                     text = "Bienvenue !",
                     color = Color.White,
-                    fontSize = 30.sp,
+                    fontSize = 26.sp,
                     fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "Connectez-vous à votre compte",
                     color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 16.sp
+                    fontSize = 14.sp
                 )
             }
         }
@@ -245,7 +246,7 @@ fun LoginScreen(
                     .height(62.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue
+                    containerColor = DarkBlue
                 ),
                 enabled = !isLoading
             ) {

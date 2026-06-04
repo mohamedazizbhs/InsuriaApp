@@ -3,32 +3,33 @@ package com.example.insuriaapp.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.insuriaapp.R
-import androidx.compose.runtime.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 private val Navy = Color(0xFF00133F)
+private val NavySoft = Color(0xFF08296D)
+private val DarkBlue = Color(0xFF00246E)
 private val Blue = Color(0xFF1463FF)
 private val LightBg = Color(0xFFF4F7FF)
 private val TextBlue = Color(0xFF071D55)
-private val Green = Color(0xFF18B26B)
 private val Orange = Color(0xFFFFA726)
 
 @Composable
@@ -36,180 +37,194 @@ fun HomeScreen(
     onDeclareClaimClick: () -> Unit,
     onContractsClick: () -> Unit,
     onClaimsClick: () -> Unit,
-    onAssistanceClick: () -> Unit
+    onAssistanceClick: () -> Unit,
+    onLogoutClick: () -> Unit
 ) {
-
-    var prenom by remember {
-        mutableStateOf("Utilisateur")
-    }
-
-    val currentUser = FirebaseAuth.getInstance().currentUser
+    var prenom by remember { mutableStateOf("Utilisateur") }
+    var contractsCount by remember { mutableStateOf(0) }
+    var claimsCount by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
 
-        currentUser?.uid?.let { uid ->
+        if (uid != null) {
+            val db = FirebaseFirestore.getInstance()
 
-            FirebaseFirestore.getInstance()
-                .collection("users")
+            db.collection("users")
                 .document(uid)
                 .get()
                 .addOnSuccessListener { document ->
+                    prenom = document.getString("prénom") ?: "Utilisateur"
+                }
 
-                    prenom =
-                        document.getString("prénom")
-                            ?: "Utilisateur"
+            db.collection("contrats")
+                .whereEqualTo("userId", uid)
+                .get()
+                .addOnSuccessListener { result ->
+                    contractsCount = result.size()
+                }
+
+            db.collection("sinistres")
+                .whereEqualTo("userId", uid)
+                .get()
+                .addOnSuccessListener { result ->
+                    claimsCount = result.size()
                 }
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(LightBg)
-            .verticalScroll(rememberScrollState())
-            .padding(22.dp)
-    ) {
-
-        HomeHeader(prenom)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        MainClaimCard(onDeclareClaimClick)
-
-        // Garde tout le reste inchangé
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Actions rapides",
-            color = TextBlue,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Scaffold(
+        containerColor = LightBg
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-            SimpleActionCard(
-                title = "Contrats",
-                icon = Icons.Outlined.Description,
-                modifier = Modifier.weight(1f),
-                onClick = onContractsClick
-            )
+            item {
+                HeroHeader(
+                    prenom = prenom,
+                    onLogoutClick = onLogoutClick
+                )
+            }
 
-            SimpleActionCard(
-                title = "Sinistres",
-                icon = Icons.Outlined.FolderOpen,
-                modifier = Modifier.weight(1f),
-                onClick = onClaimsClick
-            )
+            item {
+                Column(
+                    modifier = Modifier
+                        .offset(y = (-34).dp)
+                        .padding(horizontal = 22.dp)
+                ) {
+                    MainClaimCard(onDeclareClaimClick)
 
-            SimpleActionCard(
-                title = "Support",
-                icon = Icons.Outlined.SupportAgent,
-                modifier = Modifier.weight(1f),
-                onClick = onAssistanceClick
-            )
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        StatPill(
+                            value = contractsCount.toString(),
+                            label = "Contrats",
+                            icon = Icons.Outlined.Description,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        StatPill(
+                            value = claimsCount.toString(),
+                            label = "Sinistres",
+                            icon = Icons.Outlined.FolderOpen,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(26.dp))
+
+                    SectionTitle("Accès rapide")
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ElegantActionCard(
+                            title = "Contrats",
+                            subtitle = "Voir mes garanties",
+                            icon = Icons.Outlined.Description,
+                            modifier = Modifier.weight(1f),
+                            onClick = onContractsClick
+                        )
+
+                        ElegantActionCard(
+                            title = "Sinistres",
+                            subtitle = "Suivre mes dossiers",
+                            icon = Icons.Outlined.FolderOpen,
+                            modifier = Modifier.weight(1f),
+                            onClick = onClaimsClick
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ElegantWideCard(
+                        title = "Assistance",
+                        subtitle = "Besoin d’aide ? Contactez le support ou l’assistant.",
+                        icon = Icons.Outlined.SupportAgent,
+                        onClick = onAssistanceClick
+                    )
+
+                    Spacer(modifier = Modifier.height(26.dp))
+
+                    SectionTitle("Dernière activité")
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    LastClaimCard()
+
+                    Spacer(modifier = Modifier.height(28.dp))
+                }
+            }
         }
-
-        Spacer(modifier = Modifier.height(26.dp))
-
-        Text(
-            text = "Aperçu",
-            color = TextBlue,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            SmallStatCard(
-                value = "3",
-                label = "Contrats actifs",
-                modifier = Modifier.weight(1f)
-            )
-
-            SmallStatCard(
-                value = "1",
-                label = "Sinistre en cours",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(26.dp))
-
-        Text(
-            text = "Dernier sinistre",
-            color = TextBlue,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        LastClaimCard()
-
-        Spacer(modifier = Modifier.height(26.dp))
-
-        AssistanceMinimalCard()
-
-        Spacer(modifier = Modifier.height(20.dp))
     }
 }
 
 @Composable
-private fun HomeHeader(
-    prénom: String
+private fun HeroHeader(
+    prenom: String,
+    onLogoutClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.insuria_logo),
-                contentDescription = "Logo Insuria",
-                modifier = Modifier
-                    .width(130.dp)
-                    .height(55.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(285.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(NavySoft, Navy)
+                )
             )
+            .padding(horizontal = 24.dp, vertical = 18.dp)
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.insuria_logo_white),
+                    contentDescription = "Logo Insuria",
+                    modifier = Modifier
+                        .width(185.dp)
+                        .height(88.dp),
+                    contentScale = ContentScale.Fit
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(
+                    onClick = onLogoutClick,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.13f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Logout,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(
-                text = "Bonjour $prénom 👋",
-                color = TextBlue,
-                fontSize = 28.sp,
+                text = "Bonjour $prenom 👋",
+                color = Color.White,
+                fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Votre espace assurance",
-                color = TextBlue.copy(alpha = 0.6f),
-                fontSize = 15.sp
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = null,
-                tint = Blue
+                text = "Gérez vos contrats et déclarez un sinistre en toute simplicité.",
+                color = Color.White.copy(alpha = 0.78f),
+                fontSize = 15.sp,
+                lineHeight = 22.sp
             )
         }
     }
@@ -218,40 +233,47 @@ private fun HomeHeader(
 @Composable
 private fun MainClaimCard(
     onDeclareClaimClick: () -> Unit
-)  {
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Navy),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(22.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Shield,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(36.dp)
-            )
+        Column(modifier = Modifier.padding(22.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(DarkBlue.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ReportProblem,
+                        contentDescription = null,
+                        tint = DarkBlue,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
-            Text(
-                text = "Déclarer un sinistre",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Déclarer un sinistre",
+                        color = TextBlue,
+                        fontSize = 21.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Ajoutez vos preuves, décrivez l’incident et envoyez votre déclaration rapidement.",
-                color = Color.White.copy(alpha = 0.75f),
-                fontSize = 14.sp,
-                lineHeight = 21.sp
-            )
+                    Text(
+                        text = "Un parcours guidé en 5 étapes.",
+                        color = TextBlue.copy(alpha = 0.58f),
+                        fontSize = 13.sp
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -259,12 +281,12 @@ private fun MainClaimCard(
                 onClick = onDeclareClaimClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp),
+                    .height(58.dp),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                colors = ButtonDefaults.buttonColors(containerColor = DarkBlue)
             ) {
                 Text(
-                    text = "Commencer",
+                    text = "Commencer maintenant",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -278,72 +300,158 @@ private fun MainClaimCard(
 }
 
 @Composable
-private fun SimpleActionCard(
+private fun StatPill(
+    value: String,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(104.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(DarkBlue.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = DarkBlue)
+            }
+
+            Spacer(modifier = Modifier.width(13.dp))
+
+            Column {
+                Text(
+                    text = value,
+                    color = TextBlue,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+
+                Text(
+                    text = label,
+                    color = TextBlue.copy(alpha = 0.58f),
+                    fontSize = 13.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        color = TextBlue,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.ExtraBold
+    )
+}
+
+@Composable
+private fun ElegantActionCard(
     title: String,
+    subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(105.dp),
-        shape = RoundedCornerShape(22.dp),
+        modifier = modifier.height(132.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(17.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Blue,
-                modifier = Modifier.size(28.dp)
+                tint = DarkBlue,
+                modifier = Modifier.size(31.dp)
             )
 
-            Text(
-                text = title,
-                color = TextBlue,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Column {
+                Text(
+                    text = title,
+                    color = TextBlue,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+
+                Text(
+                    text = subtitle,
+                    color = TextBlue.copy(alpha = 0.54f),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SmallStatCard(
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier
+private fun ElegantWideCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.height(100.dp),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Navy),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.Center
+        Row(
+            modifier = Modifier.padding(19.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = value,
-                color = Blue,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(17.dp))
+                    .background(Color.White.copy(alpha = 0.13f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White)
+            }
 
-            Text(
-                text = label,
-                color = TextBlue.copy(alpha = 0.65f),
-                fontSize = 13.sp
-            )
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = subtitle,
+                    color = Color.White.copy(alpha = 0.70f),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
+
+            Text("→", color = Color.White, fontSize = 25.sp)
         }
     }
 }
@@ -352,7 +460,7 @@ private fun SmallStatCard(
 private fun LastClaimCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -363,8 +471,8 @@ private fun LastClaimCard() {
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Orange.copy(alpha = 0.15f)),
+                    .clip(RoundedCornerShape(17.dp))
+                    .background(Orange.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -374,13 +482,11 @@ private fun LastClaimCard() {
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(15.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Accident voiture",
+                    text = "Suivi de dossier",
                     color = TextBlue,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
@@ -389,66 +495,13 @@ private fun LastClaimCard() {
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Déclaré le 12/05/2026",
+                    text = "Consultez l’évolution de vos sinistres.",
                     color = TextBlue.copy(alpha = 0.55f),
                     fontSize = 13.sp
                 )
             }
 
-            Text(
-                text = "En cours",
-                color = Orange,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-private fun AssistanceMinimalCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.SupportAgent,
-                contentDescription = null,
-                tint = Blue,
-                modifier = Modifier.size(32.dp)
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = "Besoin d’aide ?",
-                    color = TextBlue,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "Contactez le support ou utilisez l’assistant.",
-                    color = TextBlue.copy(alpha = 0.55f),
-                    fontSize = 13.sp
-                )
-            }
-
-            Text(
-                text = "→",
-                color = Blue,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Voir", color = DarkBlue, fontWeight = FontWeight.Bold)
         }
     }
 }

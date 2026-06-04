@@ -10,7 +10,8 @@ import com.example.insuriaapp.navigation.bottomNavItems
 
 @Composable
 fun MainScreen(
-    onDeclareClaimClick: () -> Unit
+    onDeclareClaimClick: () -> Unit,
+    onLogoutClick: () -> Unit
 ) {
     val navController = rememberNavController()
     val currentBackStack by navController.currentBackStackEntryAsState()
@@ -56,7 +57,8 @@ fun MainScreen(
                     },
                     onAssistanceClick = {
                         navController.navigate("assistance")
-                    }
+                    },
+                    onLogoutClick = onLogoutClick
                 )
             }
 
@@ -64,14 +66,55 @@ fun MainScreen(
                 ContractsScreen(
                     onBackClick = {
                         navController.navigate("home")
+                    },
+                    onContractClick = { contractId ->
+                        navController.navigate("contract_detail/$contractId")
+                    },
+                    onAddContractClick = {
+                        navController.navigate("add_contract")
+                    }
+                )
+            }
+            composable("contract_detail/{contractId}") { backStackEntry ->
+                val contractId = backStackEntry.arguments?.getString("contractId") ?: ""
+
+                ContractDetailScreen(
+                    contractId = contractId,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+            composable("add_contract") {
+                AddContractScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onContractAdded = {
+                        navController.navigate("contracts") {
+                            popUpTo("contracts") { inclusive = true }
+                        }
                     }
                 )
             }
 
             composable("claims") {
-                ClaimsScreen()
+                ClaimsScreen(
+                    onClaimClick = { claimId ->
+                        navController.navigate("claim_detail/$claimId")
+                    }
+                )
             }
+            composable("claim_detail/{claimId}") { backStackEntry ->
+                val claimId = backStackEntry.arguments?.getString("claimId") ?: ""
 
+                ClaimDetailScreen(
+                    claimId = claimId,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
             composable("assistance") {
                 AssistanceScreen()
             }

@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.insuriaapp.data.ClaimData
 import com.example.insuriaapp.ui.screens.*
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AppNavigation() {
@@ -44,7 +45,12 @@ fun AppNavigation() {
                         popUpTo("welcome") { inclusive = true }
                     }
                 },
-                onBackClick = { navController.popBackStack() }
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onLoginClick = {
+                    navController.navigate("login")
+                }
             )
         }
 
@@ -56,11 +62,20 @@ fun AppNavigation() {
                     claimData.preuveType = ""
                     claimData.description = ""
                     claimData.localisation = ""
+                    claimData.contractId = ""
+                    claimData.contractLabel = ""
                     claimData.latitude = null
                     claimData.longitude = null
                     claimData.statut = "En attente"
 
                     navController.navigate("claim_type")
+                },
+                onLogoutClick = {
+                    FirebaseAuth.getInstance().signOut()
+
+                    navController.navigate("welcome") {
+                        popUpTo("home") { inclusive = true }
+                    }
                 }
             )
         }
@@ -68,9 +83,16 @@ fun AppNavigation() {
         composable("claim_type") {
             ClaimTypeScreen(
                 onBackClick = { navController.popBackStack() },
-                onNextClick = { selectedType ->
+                onNextClick = { contractId, contractLabel, selectedType ->
+                    claimData.contractId = contractId
+                    claimData.contractLabel = contractLabel
                     claimData.typeSinistre = selectedType
-                    navController.navigate("claim_proof")
+
+                    if (navController.previousBackStackEntry?.destination?.route == "claim_recap") {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate("claim_proof")
+                    }
                 }
             )
         }
@@ -81,7 +103,12 @@ fun AppNavigation() {
                 onNextClick = { proofUri, proofType ->
                     claimData.preuveUri = proofUri
                     claimData.preuveType = proofType
-                    navController.navigate("claim_description")
+
+                    if (navController.previousBackStackEntry?.destination?.route == "claim_recap") {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate("claim_description")
+                    }
                 }
             )
         }
@@ -89,9 +116,16 @@ fun AppNavigation() {
         composable("claim_description") {
             ClaimDescriptionScreen(
                 onBackClick = { navController.popBackStack() },
-                onNextClick = { description ->
+                onNextClick = { description, hasAudio, audioPath ->
                     claimData.description = description
-                    navController.navigate("claim_location")
+                    claimData.hasAudio = hasAudio
+                    claimData.audioPath = audioPath
+
+                    if (navController.previousBackStackEntry?.destination?.route == "claim_recap") {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate("claim_location")
+                    }
                 }
             )
         }
@@ -103,7 +137,12 @@ fun AppNavigation() {
                     claimData.localisation = localisation
                     claimData.latitude = latitude
                     claimData.longitude = longitude
-                    navController.navigate("claim_recap")
+
+                    if (navController.previousBackStackEntry?.destination?.route == "claim_recap") {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate("claim_recap")
+                    }
                 }
             )
         }
@@ -112,6 +151,10 @@ fun AppNavigation() {
             ClaimRecapScreen(
                 claimData = claimData,
                 onBackClick = { navController.popBackStack() },
+                onEditType = { navController.navigate("claim_type") },
+                onEditProof = { navController.navigate("claim_proof") },
+                onEditDescription = { navController.navigate("claim_description") },
+                onEditLocation = { navController.navigate("claim_location") },
                 onSubmitSuccess = {
                     navController.navigate("home") {
                         popUpTo("home") { inclusive = true }
@@ -119,10 +162,6 @@ fun AppNavigation() {
                 }
             )
         }
-        composable("contracts") {
-            ContractsScreen(
-                onBackClick = { navController.popBackStack() }
-            )
-        }
+
     }
 }
